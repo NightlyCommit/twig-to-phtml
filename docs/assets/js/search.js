@@ -1,0 +1,3 @@
+var typedoc = typedoc || {};
+            typedoc.search = typedoc.search || {};
+            typedoc.search.data = {"kinds":{"128":"Class","2048":"Method"},"rows":[{"id":0,"kind":128,"name":"Transpiler","url":"classes/transpiler.html","classes":"tsd-kind-class"},{"id":1,"kind":2048,"name":"transpileNode","url":"classes/transpiler.html#transpilenode","classes":"tsd-kind-method tsd-parent-kind-class","parent":"Transpiler"},{"id":2,"kind":2048,"name":"transpile","url":"classes/transpiler.html#transpile","classes":"tsd-kind-method tsd-parent-kind-class","parent":"Transpiler"}]};
