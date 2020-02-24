@@ -55,7 +55,7 @@ Apache-2.0 © [Eric MORAND]()
 
 [npm-image]: https://badge.fury.io/js/twig-to-phtml.svg
 [npm-url]: https://npmjs.org/package/twig-to-phtml
-[travis-image]: https://travis-ci.org/NightlyCommit/twig-to-phtml.svg?branch=master
-[travis-url]: https://travis-ci.org/NightlyCommit/twig-to-phtml
+[travis-image]: https://travis-ci.com/NightlyCommit/twig-to-phtml.svg?branch=master
+[travis-url]: https://travis-ci.com/NightlyCommit/twig-to-phtml
 [coveralls-image]: https://coveralls.io/repos/github/NightlyCommit/twig-to-phtml/badge.svg
 [coveralls-url]: https://coveralls.io/github/NightlyCommit/twig-to-phtml
