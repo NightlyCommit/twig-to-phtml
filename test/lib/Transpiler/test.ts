@@ -6,7 +6,8 @@ import {
     TwingNodeExpressionBinaryEqual,
     TwingNodeExpressionConstant, TwingNodeExpressionGetAttr,
     TwingNodeExpressionName, TwingNodeFor,
-    TwingNodeIf, TwingNodePrint, TwingNodeText
+    TwingNodeIf, TwingNodePrint, TwingNodeText,
+    TwingNodeExpressionFunction
 } from "twing";
 
 tape('Transpiler', (test) => {
@@ -193,8 +194,46 @@ bar
         test.end();
     });
 
+    test.test('supports TwingNodeExpressionFunction nodes', (test) => {
+        test.same(transpiler.transpileNode(new TwingNodeExpressionFunction(
+            'foo',
+            new TwingNode(new Map(), new Map(), 0, 0),
+            0, 0)
+        ), `foo()`, 'with zero argument');
+        test.same(transpiler.transpileNode(new TwingNodeExpressionFunction(
+            'foo',
+            new TwingNode(new Map([
+                [0, new TwingNodeExpressionConstant('bar', 0, 0)],
+                [1, new TwingNodeExpressionConstant('oof', 0, 0)]
+            ]), new Map(), 0, 0),
+            0, 0)
+        ), `foo("bar","oof")`, 'with arguments');
+        test.end();
+    });
+
     test.test('transpile', (test) => {
         test.same(transpiler.transpile(`{{foo}}`), `<?=$foo?>`);
+
+        test.end();
+    });
+
+    test.test('registerFunction', (test) => {
+        let transpiler = new Transpiler();
+
+        let message: string = 'should throw an exception when transpiling a non-registered function';
+
+        try {
+            transpiler.transpile(`{{foo("bar")}}`);
+
+            test.fail(message);
+        }
+        catch (err) {
+            test.pass(message);
+        }
+
+        transpiler.registerFunction('foo');
+
+        test.same(transpiler.transpile(`{{foo("bar")}}`), `<?=foo("bar")?>`);
 
         test.end();
     });

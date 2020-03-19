@@ -1,25 +1,32 @@
 import {
+    TwingEnvironment,
+    TwingFunction,
+    TwingLoaderArray,
     TwingNode,
-    TwingNodeType,
+    TwingNodeComment,
+    TwingNodeExpression,
+    TwingNodeExpressionArray,
+    TwingNodeExpressionAssignName,
+    TwingNodeExpressionBinary,
+    TwingNodeExpressionConstant, TwingNodeExpressionFunction,
+    TwingNodeExpressionGetAttr,
+    TwingNodeExpressionName,
     TwingNodeFor,
     TwingNodeIf,
-    TwingNodeComment,
     TwingNodePrint,
     TwingNodeText,
-    TwingNodeExpressionName,
-    TwingNodeExpressionBinary,
-    TwingNodeExpressionAssignName,
-    TwingNodeExpressionGetAttr,
-    TwingNodeExpressionConstant,
-    TwingNodeExpressionArray,
-    TwingTemplate,
-    TwingNodeExpression,
-    TwingEnvironment,
-    TwingLoaderArray,
-    TwingSource
+    TwingNodeType,
+    TwingSource,
+    TwingTemplate
 } from 'twing';
 
 export class Transpiler {
+    private _functions: Set<string>;
+
+    constructor() {
+        this._functions = new Set();
+    }
+
     private transpileCommentNode(node: TwingNodeComment): string {
         let results = [];
 
@@ -179,6 +186,16 @@ export class Transpiler {
         return node.getAttribute('data');
     }
 
+    private transpileExpressionFunctionNode(node: TwingNodeExpressionFunction): string {
+        let argumentsNode: TwingNode = node.getNode('arguments');
+
+        let parameters: Array<any> = [...argumentsNode.getNodes().values()].map((value) => {
+            return this.transpileNode(value);
+        });
+
+        return `${node.getAttribute('name')}(${parameters.join(',')})`;
+    }
+
     transpileNode(node: TwingNode, raw: boolean = false): string {
         if (node.getType() === TwingNodeType.PRINT) {
             return this.transpilePrintNode(node as TwingNodePrint);
@@ -224,6 +241,10 @@ export class Transpiler {
             return this.transpileCommentNode(node as TwingNodeComment);
         }
 
+        if (node.getType() === TwingNodeType.EXPRESSION_FUNCTION) {
+            return this.transpileExpressionFunctionNode(node as TwingNodeExpressionFunction);
+        }
+
         let results = [];
 
         for (let [name, child] of node.getNodes()) {
@@ -237,8 +258,22 @@ export class Transpiler {
         let env = new TwingEnvironment(new TwingLoaderArray({}), {
             autoescape: false
         });
+
+        for (let functionName of this._functions) {
+            env.addFunction(new TwingFunction(functionName, null, []))
+        }
+
         let node = env.parse(env.tokenize(new TwingSource(code, '')));
 
         return this.transpileNode(node);
+    }
+
+    /**
+     * Register a function to the transpiler.
+     *
+     * @param name
+     */
+    registerFunction(name: string): void {
+        this._functions.add(name);
     }
 }
