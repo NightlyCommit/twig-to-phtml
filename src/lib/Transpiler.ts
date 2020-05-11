@@ -13,7 +13,7 @@ import {
     TwingNodeExpressionName,
     TwingNodeFor,
     TwingNodeIf,
-    TwingNodePrint,
+    TwingNodePrint, TwingNodeSet,
     TwingNodeText,
     TwingNodeType,
     TwingSource,
@@ -196,6 +196,19 @@ export class Transpiler {
         return `${node.getAttribute('name')}(${parameters.join(',')})`;
     }
 
+    private transpileSetNode(node: TwingNodeSet): string {
+        let results: Array<string> = [];
+
+        const names = node.getNode('names');
+        const values = node.getNode('values');
+
+        for (let [k, v] of names.getNodes()) {
+            results.push(`<?php $${v.getAttribute('name')} = ${this.transpileNode(values.getNode(k))} ?>`);
+        }
+
+        return results.join('\n');
+    }
+
     private transpileNode(node: TwingNode, raw: boolean = false): string {
         if (node.getType() === TwingNodeType.PRINT) {
             return this.transpilePrintNode(node as TwingNodePrint);
@@ -243,6 +256,10 @@ export class Transpiler {
 
         if (node.getType() === TwingNodeType.EXPRESSION_FUNCTION) {
             return this.transpileExpressionFunctionNode(node as TwingNodeExpressionFunction);
+        }
+
+        if (node.getType() === TwingNodeType.SET) {
+            return this.transpileSetNode(node as TwingNodeSet);
         }
 
         let results = [];

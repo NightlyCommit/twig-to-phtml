@@ -85,6 +85,16 @@ bar*/ ?>`);
             test.end();
         });
 
+        test.test('supports set', (test) => {
+            test.same(transpiler.transpile('{% set foo = "bar" %}'), '<?php $foo = "bar" ?>');
+            test.same(transpiler.transpile('{% set foo, bar = "foo", "bar" %}'), `<?php $foo = "foo" ?>
+<?php $bar = "bar" ?>`);
+            test.same(transpiler.transpile('{% set foo = lorem.ipsum %}'), '<?php $foo = $lorem->ipsum ?>');
+            test.same(transpiler.transpile('{% set foo = lorem.ipsum() %}'), '<?php $foo = $lorem->ipsum() ?>');
+
+            test.end();
+        });
+
         test.end();
     });
 
