@@ -7,13 +7,37 @@ import {
     TwingNodeExpression,
     TwingNodeExpressionArray,
     TwingNodeExpressionAssignName,
-    TwingNodeExpressionBinary, TwingNodeExpressionConditional,
-    TwingNodeExpressionConstant, TwingNodeExpressionFunction,
+    TwingNodeExpressionBinary,
+    TwingNodeExpressionBinaryAdd,
+    TwingNodeExpressionBinaryAnd,
+    TwingNodeExpressionBinaryBitwiseAnd,
+    TwingNodeExpressionBinaryBitwiseOr,
+    TwingNodeExpressionBinaryBitwiseXor,
+    TwingNodeExpressionBinaryConcat,
+    TwingNodeExpressionBinaryDiv,
+    TwingNodeExpressionBinaryEqual,
+    TwingNodeExpressionBinaryFloorDiv,
+    TwingNodeExpressionBinaryGreater,
+    TwingNodeExpressionBinaryGreaterEqual,
+    TwingNodeExpressionBinaryLess,
+    TwingNodeExpressionBinaryLessEqual,
+    TwingNodeExpressionBinaryMod,
+    TwingNodeExpressionBinaryMul,
+    TwingNodeExpressionBinaryNotEqual,
+    TwingNodeExpressionBinaryOr, TwingNodeExpressionBinaryPower, TwingNodeExpressionBinarySub,
+    TwingNodeExpressionConditional,
+    TwingNodeExpressionConstant,
+    TwingNodeExpressionFunction,
     TwingNodeExpressionGetAttr,
     TwingNodeExpressionName,
+    TwingNodeExpressionUnary,
+    TwingNodeExpressionUnaryNeg,
+    TwingNodeExpressionUnaryNot,
+    TwingNodeExpressionUnaryPos,
     TwingNodeFor,
     TwingNodeIf,
-    TwingNodePrint, TwingNodeSet,
+    TwingNodePrint,
+    TwingNodeSet,
     TwingNodeText,
     TwingNodeType,
     TwingSource,
@@ -52,7 +76,107 @@ export class Transpiler {
     }
 
     private transpileExpressionBinaryNode(node: TwingNodeExpressionBinary): string {
-        return this.transpileNode(node.getNode('left')) + '==' + this.transpileNode(node.getNode('right'));
+        let prefix: string = '';
+        let suffix: string = '';
+        let operator: string;
+
+        if (node instanceof TwingNodeExpressionBinaryAdd) {
+            operator = '+';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryAnd) {
+            operator = '&&';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryBitwiseAnd) {
+            operator = '&';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryBitwiseOr) {
+            operator = '|';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryBitwiseXor) {
+            operator = '^';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryConcat) {
+            operator = '.';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryDiv) {
+            operator = '/';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryEqual) {
+            operator = '==';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryFloorDiv) {
+            prefix = 'floor(';
+            operator = '/';
+            suffix = ')'
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryGreater) {
+            operator = '>';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryGreaterEqual) {
+            operator = '>=';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryLess) {
+            operator = '<';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryLessEqual) {
+            operator = '<=';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryMod) {
+            operator = '%';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryMul) {
+            operator = '*';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryNotEqual) {
+            operator = '!=';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryOr) {
+            operator = '||';
+        }
+
+        if (node instanceof TwingNodeExpressionBinaryPower) {
+            operator = '**';
+        }
+
+        if (node instanceof TwingNodeExpressionBinarySub) {
+            operator = '-';
+        }
+
+        return `${prefix}(${this.transpileNode(node.getNode('left'))})${operator}(${this.transpileNode(node.getNode('right'))})${suffix}`;
+    }
+
+    private transpileExpressionUnaryNode(node: TwingNodeExpressionUnary): string {
+        let operator: string;
+
+        if (node instanceof TwingNodeExpressionUnaryNeg) {
+            operator = '-';
+        }
+
+        if (node instanceof TwingNodeExpressionUnaryNot) {
+            operator = '!';
+        }
+
+        if (node instanceof TwingNodeExpressionUnaryPos) {
+            operator = '+';
+        }
+
+        return `${operator}(${this.transpileNode(node.getNode('node'))})`;
     }
 
     private transpileExpressionNameNode(node: TwingNodeExpressionName): string {
@@ -169,7 +293,7 @@ export class Transpiler {
         }
 
         if (node.hasNode('else')) {
-            results.push('<php else: ?>');
+            results.push('<?php else: ?>');
             results.push(this.transpileNode(node.getNode('else'), true));
         }
 
@@ -254,8 +378,12 @@ export class Transpiler {
             return this.transpileExpressionGetAttrNode(node as TwingNodeExpressionGetAttr);
         }
 
-        if (node.getType() === TwingNodeType.EXPRESSION_BINARY) {
-            return this.transpileExpressionBinaryNode(node as TwingNodeExpressionBinary);
+        if (node instanceof TwingNodeExpressionBinary) {
+            return this.transpileExpressionBinaryNode(node);
+        }
+
+        if (node instanceof TwingNodeExpressionUnary) {
+            return this.transpileExpressionUnaryNode(node);
         }
 
         if (node.getType() === TwingNodeType.COMMENT) {
@@ -276,7 +404,7 @@ export class Transpiler {
 
         let results = [];
 
-        for (let [name, child] of node.getNodes()) {
+        for (let child of node.getNodes().values()) {
             results.push(this.transpileNode(child));
         }
 
