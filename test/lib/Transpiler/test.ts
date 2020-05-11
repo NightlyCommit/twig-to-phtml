@@ -95,6 +95,12 @@ bar*/ ?>`);
             test.end();
         });
 
+        test.test('supports conditional expression', (test) => {
+            test.same(transpiler.transpile('{{ foo ? "foo" : "bar" }}'), '<?=$foo ? "foo" : "bar"?>');
+
+            test.end();
+        });
+
         test.end();
     });
 

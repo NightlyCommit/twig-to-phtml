@@ -7,7 +7,7 @@ import {
     TwingNodeExpression,
     TwingNodeExpressionArray,
     TwingNodeExpressionAssignName,
-    TwingNodeExpressionBinary,
+    TwingNodeExpressionBinary, TwingNodeExpressionConditional,
     TwingNodeExpressionConstant, TwingNodeExpressionFunction,
     TwingNodeExpressionGetAttr,
     TwingNodeExpressionName,
@@ -209,6 +209,14 @@ export class Transpiler {
         return results.join('\n');
     }
 
+    private transpileExpressionConditionalNode(node: TwingNodeExpressionConditional): string {
+        const expr1 = node.getNode('expr1');
+        const expr2 = node.getNode('expr2');
+        const expr3 = node.getNode('expr3');
+
+        return `${this.transpileNode(expr1)} ? ${this.transpileNode(expr2)} : ${this.transpileNode(expr3)}`;
+    }
+
     private transpileNode(node: TwingNode, raw: boolean = false): string {
         if (node.getType() === TwingNodeType.PRINT) {
             return this.transpilePrintNode(node as TwingNodePrint);
@@ -260,6 +268,10 @@ export class Transpiler {
 
         if (node.getType() === TwingNodeType.SET) {
             return this.transpileSetNode(node as TwingNodeSet);
+        }
+
+        if (node instanceof TwingNodeExpressionConditional) {
+            return this.transpileExpressionConditionalNode(node);
         }
 
         let results = [];
