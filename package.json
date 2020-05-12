@@ -1,6 +1,6 @@
 {
   "name": "twig-to-phtml",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Twig to PHTML transpiler",
   "main": "dist/index.js",
   "scripts": {
