@@ -326,8 +326,21 @@ export class Transpiler {
         const names = node.getNode('names');
         const values = node.getNode('values');
 
-        for (let [k, v] of names.getNodes()) {
-            results.push(`<?php $${v.getAttribute('name')} = ${this.transpileNode(values.getNode(k))} ?>`);
+        if (node.hasAttribute('capture') && (node.getAttribute('capture') === true)) {
+            for (let v of names.getNodes().values()) {
+                results.push(`<?php ob_start(); ?>${this.transpileNode(values)}<?php $${v.getAttribute('name')} = ob_get_clean() ?>`);
+            }
+        } else {
+            if (values instanceof TwingNodeExpressionConstant) {
+                for (let v of names.getNodes().values()) {
+                    results.push(`<?php $${v.getAttribute('name')} = ${this.transpileNode(values)} ?>`);
+                }
+            }
+            else {
+                for (let [k, v] of names.getNodes()) {
+                    results.push(`<?php $${v.getAttribute('name')} = ${this.transpileNode(values.getNode(k))} ?>`);
+                }
+            }
         }
 
         return results.join('\n');
