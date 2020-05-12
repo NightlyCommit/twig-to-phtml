@@ -91,6 +91,8 @@ bar*/ ?>`);
 <?php $bar = "bar" ?>`);
             test.same(transpiler.transpile('{% set foo = lorem.ipsum %}'), '<?php $foo = $lorem->ipsum ?>');
             test.same(transpiler.transpile('{% set foo = lorem.ipsum() %}'), '<?php $foo = $lorem->ipsum() ?>');
+            test.same(transpiler.transpile('{% set foo %}Foo{% endset %}'), '<?php $foo = "Foo" ?>');
+            test.same(transpiler.transpile('{% set foo %}Foo {{ bar }}{% endset %}'), '<?php ob_start(); ?>Foo <?=$bar?><?php $foo = ob_get_clean() ?>');
 
             test.end();
         });
