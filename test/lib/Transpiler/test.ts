@@ -37,23 +37,23 @@ bar*/ ?>`);
         test.test('supports if', (test) => {
             test.same(transpiler.transpile(`{% if (foo == 5) %}
     TRUE
-{% endif %}`), `<?php if ($foo==5): ?>    TRUE
+{% endif %}`), `<?php if (($foo)==(5)): ?>    TRUE
 <?php endif; ?>`, 'if only');
 
             test.same(transpiler.transpile(`{% if (foo == 5) %}
     TRUE
 {% else %}
     FALSE
-{% endif %}`), `<?php if ($foo==5): ?>    TRUE
-<php else: ?>    FALSE
+{% endif %}`), `<?php if (($foo)==(5)): ?>    TRUE
+<?php else: ?>    FALSE
 <?php endif; ?>`, 'if and else');
 
             test.same(transpiler.transpile(`{% if (foo == 5) %}
     TRUE
 {% elseif (foo == 4) %}
     FALSE
-{% endif %}`), `<?php if ($foo==5): ?>    TRUE
-<?php elseif ($foo==4): ?>    FALSE
+{% endif %}`), `<?php if (($foo)==(5)): ?>    TRUE
+<?php elseif (($foo)==(4)): ?>    FALSE
 <?php endif; ?>`, 'if and elseif');
 
             test.end();
@@ -97,6 +97,33 @@ bar*/ ?>`);
 
         test.test('supports conditional expression', (test) => {
             test.same(transpiler.transpile('{{ foo ? "foo" : "bar" }}'), '<?=$foo ? "foo" : "bar"?>');
+
+            test.end();
+        });
+
+        test.test('supports unary and binary expressions', (test) => {
+            test.same(transpiler.transpile('{{ 1 + 2 }}'), '<?=(1)+(2)?>');
+            test.same(transpiler.transpile('{{ 1 and 2 }}'), '<?=(1)&&(2)?>');
+            test.same(transpiler.transpile('{{ 1 b-and 2 }}'), '<?=(1)&(2)?>');
+            test.same(transpiler.transpile('{{ 1 b-or 2 }}'), '<?=(1)|(2)?>');
+            test.same(transpiler.transpile('{{ 1 b-xor 2 }}'), '<?=(1)^(2)?>');
+            test.same(transpiler.transpile('{{ 1 ~ 2 }}'), '<?=(1).(2)?>');
+            test.same(transpiler.transpile('{{ 1 / 2 }}'), '<?=(1)/(2)?>');
+            test.same(transpiler.transpile('{{ 1 == 2 }}'), '<?=(1)==(2)?>');
+            test.same(transpiler.transpile('{{ 1 // 2 }}'), '<?=floor((1)/(2))?>');
+            test.same(transpiler.transpile('{{ 1 > 2 }}'), '<?=(1)>(2)?>');
+            test.same(transpiler.transpile('{{ 1 >= 2 }}'), '<?=(1)>=(2)?>');
+            test.same(transpiler.transpile('{{ 1 < 2 }}'), '<?=(1)<(2)?>');
+            test.same(transpiler.transpile('{{ 1 <= 2 }}'), '<?=(1)<=(2)?>');
+            test.same(transpiler.transpile('{{ 1 % 2 }}'), '<?=(1)%(2)?>');
+            test.same(transpiler.transpile('{{ 1 * 2 }}'), '<?=(1)*(2)?>');
+            test.same(transpiler.transpile('{{ 1 != 2 }}'), '<?=(1)!=(2)?>');
+            test.same(transpiler.transpile('{{ 1 or 2 }}'), '<?=(1)||(2)?>');
+            test.same(transpiler.transpile('{{ 1 ** 2 }}'), '<?=(1)**(2)?>');
+            test.same(transpiler.transpile('{{ 1 - 2 }}'), '<?=(1)-(2)?>');
+            test.same(transpiler.transpile('{{ -1 }}'), '<?=-(1)?>');
+            test.same(transpiler.transpile('{{ not 1 }}'), '<?=!(1)?>');
+            test.same(transpiler.transpile('{{ +1 }}'), '<?=+(1)?>');
 
             test.end();
         });
