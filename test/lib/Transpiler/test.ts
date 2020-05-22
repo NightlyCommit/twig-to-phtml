@@ -130,6 +130,51 @@ bar*/ ?>`);
             test.end();
         });
 
+        test.test('supports macro', (test) => {
+            test.same(transpiler.transpile(`{% macro foo() %}
+Foo {{ bar }}
+{% endmacro %}
+{{ _self.foo() }}
+`), `<?php $foo = function() use (&$foo) { ?>
+Foo <?=$bar?>
+<?php } ?>
+<?=$foo()?>
+`);
+
+            test.same(transpiler.transpile(`{% macro foo(arg) %}
+Foo {{ bar }}
+{% endmacro %}`), `<?php $foo = function($arg=null) use (&$foo) { ?>
+Foo <?=$bar?>
+<?php } ?>
+`);
+
+            test.same(transpiler.transpile(`{% macro foo(arg1, arg2) %}
+Foo {{ bar }}
+{% endmacro %}`), `<?php $foo = function($arg1=null,$arg2=null) use (&$foo) { ?>
+Foo <?=$bar?>
+<?php } ?>
+`);
+
+            test.same(transpiler.transpile(`{% macro foo(arg1 = 1) %}
+Foo {{ bar }}
+{% endmacro %}`), `<?php $foo = function($arg1=1) use (&$foo) { ?>
+Foo <?=$bar?>
+<?php } ?>
+`);
+
+            test.same(transpiler.transpile(`{% macro foo(arg1, arg2 = 1) %}
+Foo {{ bar }}
+{% endmacro %}`), `<?php $foo = function($arg1=null,$arg2=1) use (&$foo) { ?>
+Foo <?=$bar?>
+<?php } ?>
+`);
+
+            test.same(transpiler.transpile(`{{ _self.foo() }}`), `<?=$foo()?>`);
+            test.same(transpiler.transpile(`{{ _self.foo("bar") }}`), `<?=$foo("bar")?>`);
+
+            test.end();
+        });
+
         test.end();
     });
 
