@@ -29,6 +29,8 @@ import {
     TwingNodeExpressionConstant,
     TwingNodeExpressionFunction,
     TwingNodeExpressionGetAttr,
+    TwingNodeExpressionHash,
+    TwingNodeExpressionMethodCall,
     TwingNodeExpressionName,
     TwingNodeExpressionUnary,
     TwingNodeExpressionUnaryNeg,
@@ -36,22 +38,43 @@ import {
     TwingNodeExpressionUnaryPos,
     TwingNodeFor,
     TwingNodeIf,
+    TwingNodeImport,
+    TwingNodeMacro,
+    TwingNodeModule,
     TwingNodePrint,
     TwingNodeSet,
     TwingNodeText,
-    TwingNodeType,
     TwingSource,
     TwingTemplate
 } from 'twing';
 
 export class Transpiler {
-    private readonly _functions: Set<string>;
+    protected readonly _functions: Set<string>;
 
     constructor() {
         this._functions = new Set();
     }
 
-    private transpileCommentNode(node: TwingNodeComment): string {
+    protected transpileModuleNode(node: TwingNodeModule): string {
+        const results: Array<string> = [];
+
+        // we handle macros first, order matters and closures should be declared first
+        const macrosNode = node.getNode('macros');
+
+        for (let macroNode of macrosNode.getNodes().values()) {
+            results.push(this.transpileMacroNode(macroNode as TwingNodeMacro));
+        }
+
+        for (let [name, child] of node.getNodes()) {
+            if (name !== 'macros') {
+                results.push(this.transpileNode(child));
+            }
+        }
+
+        return results.join('');
+    }
+
+    protected transpileCommentNode(node: TwingNodeComment): string {
         let results = [];
 
         let parts = node.getAttribute("data").split('\n');
@@ -75,7 +98,7 @@ export class Transpiler {
         return results.join('');
     }
 
-    private transpileExpressionBinaryNode(node: TwingNodeExpressionBinary): string {
+    protected transpileExpressionBinaryNode(node: TwingNodeExpressionBinary): string {
         let prefix: string = '';
         let suffix: string = '';
         let operator: string;
@@ -161,7 +184,7 @@ export class Transpiler {
         return `${prefix}(${this.transpileNode(node.getNode('left'))})${operator}(${this.transpileNode(node.getNode('right'))})${suffix}`;
     }
 
-    private transpileExpressionUnaryNode(node: TwingNodeExpressionUnary): string {
+    protected transpileExpressionUnaryNode(node: TwingNodeExpressionUnary): string {
         let operator: string;
 
         if (node instanceof TwingNodeExpressionUnaryNeg) {
@@ -179,15 +202,11 @@ export class Transpiler {
         return `${operator}(${this.transpileNode(node.getNode('node'))})`;
     }
 
-    private transpileExpressionNameNode(node: TwingNodeExpressionName): string {
+    protected transpileExpressionNameNode(node: TwingNodeExpressionName): string {
         return `$${node.getAttribute('name')}`;
     }
 
-    private transpileExpressionAssignNameNode(node: TwingNodeExpressionAssignName): string {
-        return node.getAttribute('name');
-    }
-
-    private transpileExpressionConstantNode(node: TwingNodeExpressionConstant, raw: boolean): string {
+    protected transpileExpressionConstantNode(node: TwingNodeExpressionConstant, raw: boolean): string {
         let value = node.getAttribute('value');
 
         if (!raw && typeof value === 'string') {
@@ -197,7 +216,7 @@ export class Transpiler {
         return String(value);
     }
 
-    private transpileExpressionGetAttrNode(node: TwingNodeExpressionGetAttr): string {
+    protected transpileExpressionGetAttrNode(node: TwingNodeExpressionGetAttr): string {
         let results: Array<string> = [];
 
         results.push(this.transpileNode(node.getNode('node')));
@@ -235,12 +254,11 @@ export class Transpiler {
         return results.join('');
     }
 
-    private transpileExpressionArrayNode(node: TwingNodeExpressionArray): string {
+    protected transpileExpressionArrayNode(node: TwingNodeExpressionArray): string {
         let results: Array<string> = [];
 
         results.push('[');
 
-        // we can remove explicit typing when https://github.com/NightlyCommit/twing/issues/476 is fixed
         let pairs = node.getKeyValuePairs();
         let values: Array<any> = [];
 
@@ -254,15 +272,15 @@ export class Transpiler {
         return results.join('');
     }
 
-    private transpileForNode(node: TwingNodeFor): string {
+    protected transpileForNode(node: TwingNodeFor): string {
         let results: Array<string> = [];
 
         results.push('<?php foreach (');
         results.push(this.transpileNode(node.getNode('seq')));
         results.push(' as ');
-        results.push(`$${this.transpileNode(node.getNode('key_target'))}`);
+        results.push(`${this.transpileNode(node.getNode('key_target'))}`);
         results.push(' => ');
-        results.push(`$${this.transpileNode(node.getNode('value_target'))}`);
+        results.push(`${this.transpileNode(node.getNode('value_target'))}`);
         results.push('): ?>');
         results.push(this.transpileNode(node.getNode('body')));
         results.push('<?php endforeach; ?>');
@@ -270,7 +288,7 @@ export class Transpiler {
         return results.join('');
     }
 
-    private transpileIfNode(node: TwingNodeIf): string {
+    protected transpileIfNode(node: TwingNodeIf): string {
         let results = [];
         let testNodes = node.getNode('tests').getNodes() as Map<number, TwingNode>;
         let testIndex = 0;
@@ -302,25 +320,21 @@ export class Transpiler {
         return results.join('');
     }
 
-    private transpilePrintNode(node: TwingNodePrint): string {
+    protected transpilePrintNode(node: TwingNodePrint): string {
         return `<?=${this.transpileNode(node.getNode('expr'))}?>`;
     }
 
-    private transpileTextNode(node: TwingNodeText): string {
+    protected transpileTextNode(node: TwingNodeText): string {
         return node.getAttribute('data');
     }
 
-    private transpileExpressionFunctionNode(node: TwingNodeExpressionFunction): string {
-        let argumentsNode: TwingNode = node.getNode('arguments');
+    protected transpileExpressionFunctionNode(node: TwingNodeExpressionFunction): string {
+        let argumentsNode = node.getNode('arguments') as TwingNodeExpressionArray;
 
-        let parameters: Array<any> = [...argumentsNode.getNodes().values()].map((value) => {
-            return this.transpileNode(value);
-        });
-
-        return `${node.getAttribute('name')}(${parameters.join(',')})`;
+        return `${node.getAttribute('name')}(${this.transpileArguments(argumentsNode)})`;
     }
 
-    private transpileSetNode(node: TwingNodeSet): string {
+    protected transpileSetNode(node: TwingNodeSet): string {
         let results: Array<string> = [];
 
         const names = node.getNode('names');
@@ -346,7 +360,7 @@ export class Transpiler {
         return results.join('\n');
     }
 
-    private transpileExpressionConditionalNode(node: TwingNodeExpressionConditional): string {
+    protected transpileExpressionConditionalNode(node: TwingNodeExpressionConditional): string {
         const expr1 = node.getNode('expr1');
         const expr2 = node.getNode('expr2');
         const expr3 = node.getNode('expr3');
@@ -354,41 +368,84 @@ export class Transpiler {
         return `${this.transpileNode(expr1)} ? ${this.transpileNode(expr2)} : ${this.transpileNode(expr3)}`;
     }
 
-    private transpileNode(node: TwingNode, raw: boolean = false): string {
-        if (node.getType() === TwingNodeType.PRINT) {
-            return this.transpilePrintNode(node as TwingNodePrint);
+    protected transpileExpressionMethodCallNode(node: TwingNodeExpressionMethodCall): string {
+        let argumentsNode = node.getNode('arguments') as TwingNodeExpressionArray;
+
+        return `$${node.getAttribute('method')}(${this.transpileArguments(argumentsNode)})`;
+    }
+
+    protected transpileMacroNode(node: TwingNodeMacro): string {
+        const results: Array<string> = [];
+
+        const name = node.getAttribute('name');
+        const argumentsNode = node.getNode('arguments');
+        const body = node.getNode('body');
+
+        const macroArguments: Array<string> = [];
+
+        for (let [name, value] of argumentsNode.getNodes()) {
+            macroArguments.push(`$${name}=${this.transpileNode(value)}`);
         }
 
-        if (node.getType() === TwingNodeType.TEXT) {
-            return this.transpileTextNode(node as TwingNodeText);
+        results.push(`<?php $${name} = function(${macroArguments.join(',')}) use (&$${name}) { ?>\n`);
+        results.push(this.transpileNode(body));
+        results.push(`<?php } ?>\n`);
+
+        return results.join('');
+    }
+
+    protected transpileArguments(node: TwingNode | TwingNodeExpressionArray): string {
+        let values: Array<TwingNode>;
+
+        if (node instanceof TwingNodeExpressionArray) {
+            values = node.getKeyValuePairs().map((keyValuePair) => {
+                return keyValuePair.value;
+            });
+        }
+        else {
+            values = [...node.getNodes().values()];
         }
 
-        if (node.getType() === TwingNodeType.EXPRESSION_NAME) {
-            return this.transpileExpressionNameNode(node as TwingNodeExpressionName);
+        return values.map((value) => {
+            return this.transpileNode(value);
+        }).join(',');
+    }
+
+    protected transpileNode(node: TwingNode, raw: boolean = false): string {
+        if (node instanceof TwingNodeModule) {
+            return this.transpileModuleNode(node);
         }
 
-        if (node.getType() === TwingNodeType.EXPRESSION_CONSTANT) {
-            return this.transpileExpressionConstantNode(node as TwingNodeExpressionConstant, raw);
+        if (node instanceof TwingNodePrint) {
+            return this.transpilePrintNode(node);
         }
 
-        if (node.getType() === TwingNodeType.EXPRESSION_ARRAY) {
-            return this.transpileExpressionArrayNode(node as TwingNodeExpressionArray);
+        if (node instanceof TwingNodeText) {
+            return this.transpileTextNode(node);
         }
 
-        if (node.getType() === TwingNodeType.EXPRESSION_ASSIGN_NAME) {
-            return this.transpileExpressionAssignNameNode(node as TwingNodeExpressionAssignName);
+        if (node instanceof TwingNodeExpressionName || node instanceof TwingNodeExpressionAssignName) {
+            return this.transpileExpressionNameNode(node);
         }
 
-        if (node.getType() === TwingNodeType.FOR) {
-            return this.transpileForNode(node as TwingNodeFor);
+        if (node instanceof TwingNodeExpressionConstant) {
+            return this.transpileExpressionConstantNode(node, raw);
         }
 
-        if (node.getType() === TwingNodeType.IF) {
-            return this.transpileIfNode(node as TwingNodeIf);
+        if (node instanceof TwingNodeExpressionArray || node instanceof TwingNodeExpressionHash) {
+            return this.transpileExpressionArrayNode(node);
         }
 
-        if (node.getType() === TwingNodeType.EXPRESSION_GET_ATTR) {
-            return this.transpileExpressionGetAttrNode(node as TwingNodeExpressionGetAttr);
+        if (node instanceof TwingNodeFor) {
+            return this.transpileForNode(node);
+        }
+
+        if (node instanceof TwingNodeIf) {
+            return this.transpileIfNode(node);
+        }
+
+        if (node instanceof TwingNodeExpressionGetAttr) {
+            return this.transpileExpressionGetAttrNode(node);
         }
 
         if (node instanceof TwingNodeExpressionBinary) {
@@ -399,23 +456,31 @@ export class Transpiler {
             return this.transpileExpressionUnaryNode(node);
         }
 
-        if (node.getType() === TwingNodeType.COMMENT) {
-            return this.transpileCommentNode(node as TwingNodeComment);
+        if (node instanceof TwingNodeComment) {
+            return this.transpileCommentNode(node);
         }
 
-        if (node.getType() === TwingNodeType.EXPRESSION_FUNCTION) {
-            return this.transpileExpressionFunctionNode(node as TwingNodeExpressionFunction);
+        if (node instanceof TwingNodeExpressionFunction) {
+            return this.transpileExpressionFunctionNode(node);
         }
 
-        if (node.getType() === TwingNodeType.SET) {
-            return this.transpileSetNode(node as TwingNodeSet);
+        if (node instanceof TwingNodeSet) {
+            return this.transpileSetNode(node);
         }
 
         if (node instanceof TwingNodeExpressionConditional) {
             return this.transpileExpressionConditionalNode(node);
         }
 
-        let results = [];
+        if (node instanceof TwingNodeExpressionMethodCall) {
+            return this.transpileExpressionMethodCallNode(node);
+        }
+
+        if (node instanceof TwingNodeImport) {
+            return '';
+        }
+
+        let results: Array<string> = [];
 
         for (let child of node.getNodes().values()) {
             results.push(this.transpileNode(child));
