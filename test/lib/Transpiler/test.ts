@@ -175,6 +175,13 @@ Foo <?=$bar?>
             test.end();
         });
 
+        test.test('supports is defined test', (test) => {
+            test.same(transpiler.transpile('{% if foo is defined %}Foo{% endif %}'), `<?php if (isset($foo)): ?>Foo<?php endif; ?>`);
+            test.same(transpiler.transpile('{{ foo is defined ? foo : "bar" }}'), '<?=isset($foo) ? $foo : "bar"?>');
+
+            test.end();
+        });
+
         test.end();
     });
 

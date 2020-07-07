@@ -31,7 +31,7 @@ import {
     TwingNodeExpressionGetAttr,
     TwingNodeExpressionHash,
     TwingNodeExpressionMethodCall,
-    TwingNodeExpressionName,
+    TwingNodeExpressionName, TwingNodeExpressionTestDefined,
     TwingNodeExpressionUnary,
     TwingNodeExpressionUnaryNeg,
     TwingNodeExpressionUnaryNot,
@@ -411,6 +411,10 @@ export class Transpiler {
         }).join(',');
     }
 
+    protected transpileExpressionTestDefinedNode(node: TwingNodeExpressionTestDefined): string {
+        return `isset(${this.transpileNode(node.getNode('node'))})`;
+    }
+
     protected transpileNode(node: TwingNode, raw: boolean = false): string {
         if (node instanceof TwingNodeModule) {
             return this.transpileModuleNode(node);
@@ -474,6 +478,10 @@ export class Transpiler {
 
         if (node instanceof TwingNodeExpressionMethodCall) {
             return this.transpileExpressionMethodCallNode(node);
+        }
+
+        if (node instanceof TwingNodeExpressionTestDefined) {
+            return this.transpileExpressionTestDefinedNode(node);
         }
 
         if (node instanceof TwingNodeImport) {
